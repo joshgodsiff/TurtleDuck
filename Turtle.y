@@ -56,7 +56,8 @@ Statement1 : Exp Statement1 {Statement $1:$2}
           | '}' {[]}
 
 Exp : identifier '=' Expression {Assignment $1 $3}
-    | IfStmt {$1}
+    | if '(' Expression ')' Statement else Statement {If $3 $5 (Just $7)}
+    | if '(' Expression ')' Statement %prec noelse {If $3 $5 Nothing}
     | while '(' Expression ')' Statement {While $3 $5}
     | read '(' identifier ')' {Read $3}
     | up {Up}
@@ -65,17 +66,6 @@ Exp : identifier '=' Expression {Assignment $1 $3}
     | identifier '(' Args {ExpFunctionCall $1 $3}
     | return Expression {Return $2}
     
-IfStmt : MatchedIfStmt {$1}
-    | OpenIfStmt {$1}
-    
-MatchedIfStmt : if '(' Expression ')' Statement else Statement {If $3 $5 (Just $7)}
--- MatchedIfStmt : if '(' Expression ')' MatchedIfStmt else MatchedIfStmt {If $3 $5 (Just $7)}
---               | Statement {$1}
-
-OpenIfStmt : if '(' Expression ')' Statement %prec noelse {If $3 $5 Nothing}
--- OpenIfStmt : if '(' Expression ')' Statement {If $3 $5 Nothing}
---           | if '(' Expression ')' MatchedIfStmt else OpenIfStmt {If $3 $5 (Just $7)}
-
 Expression : Expression '+' Term {Plus $1 $3}
 	   | Expression '-' Term {Minus $1 $3}
 	   | Expression '==' Term {Equal $1 $3}

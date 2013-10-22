@@ -3,6 +3,7 @@ module Main where
 
 import Lexer (Token)
 import qualified Lexer as Tok
+import TurtleData
 }
 
 %name parseTurtle 
@@ -56,7 +57,8 @@ Statement1 : Exp Statement1 {Statement $1:$2}
           | '}' {[]}
 
 Exp : identifier '=' Expression {Assignment $1 $3}
-    | IfStmt {$1}
+    | if '(' Expression ')' Statement else Statement {If $3 $5 (Just $7)}
+    | if '(' Expression ')' Statement %prec noelse {If $3 $5 Nothing}
     | while '(' Expression ')' Statement {While $3 $5}
     | read '(' identifier ')' {Read $3}
     | up {Up}
@@ -64,17 +66,6 @@ Exp : identifier '=' Expression {Assignment $1 $3}
     | moveto '(' Expression ',' Expression ')' {MoveTo $3 $5}
     | identifier '(' Args {ExpFunctionCall $1 $3}
     | return Expression {Return $2}
-    
-IfStmt : MatchedIfStmt {$1}
-    | OpenIfStmt {$1}
-    
-MatchedIfStmt : if '(' Expression ')' Statement else Statement {If $3 $5 (Just $7)}
--- MatchedIfStmt : if '(' Expression ')' MatchedIfStmt else MatchedIfStmt {If $3 $5 (Just $7)}
---               | Statement {$1}
-
-OpenIfStmt : if '(' Expression ')' Statement %prec noelse {If $3 $5 Nothing}
--- OpenIfStmt : if '(' Expression ')' Statement {If $3 $5 Nothing}
---           | if '(' Expression ')' MatchedIfStmt else OpenIfStmt {If $3 $5 (Just $7)}
 
 Expression : Expression '+' Term {Plus $1 $3}
 	   | Expression '-' Term {Minus $1 $3}
@@ -106,35 +97,6 @@ Args1 : ')' {[]}
 { 
 -- We build the parse tree so we can check this works
 -- this won't be here in the final version
-
-data Turtle = Turtle String [VarDec] [FunDec] Statement
-  deriving Show
-data VarDec = VarDec String (Maybe Expression)
-  deriving Show
-data FunDec = FunDec String [String] [VarDec] Statement
-  deriving Show
-data Statement = Statement Exp
-	   | Statements [Statement]
-  deriving Show
-data Exp = Assignment String Expression
-     | If Expression Statement (Maybe Statement)
-     | While Expression Statement
-     | Read String
-     | Up
-     | Down
-     | MoveTo Expression Expression
-     | Return Expression
-     | ExpFunctionCall String [Expression]
-  deriving Show
-data Expression = Plus Expression Expression
-	    | Minus Expression Expression
-	    | Mult Expression Expression
-	    | Literal Int
-	    | Identifier String
-	    | Equal Expression Expression
-	    | LessThan Expression Expression
-	    | FunctionCall String [Expression]
-  deriving Show
 
 main = getContents >>= print . parseTurtle . Tok.alexScanTokens
 }

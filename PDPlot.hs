@@ -60,6 +60,7 @@ toMachineCode (Jeq   x)    = [Left 0x7200, x]
 toMachineCode (Jlt   x)    = [Left 0x7400, x]
 toMachineCode (Loadi x)    = [Left 0x5600, Left x]
 toMachineCode (Pop   x)    = [Left 0x5e00, Left x]
+-- 'Move' instruction missing?
 
 resolveLabels :: MachineWord -> LookupTable -> Int16
 resolveLabels (Left x ) _ = x

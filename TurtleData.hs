@@ -24,7 +24,7 @@ data Statement = Statement Exp
   deriving Show
 
 data Exp = Assignment String Expression
-     | If Expression Statement (Maybe Statement)
+     | If Comparison Statement (Maybe Statement)
      | While Expression Statement
      | Read String
      | Up

@@ -57,9 +57,9 @@ Statement1 : Exp Statement1 {Statement $1:$2}
           | '}' {[]}
 
 Exp : identifier '=' Expression {Assignment $1 $3}
-    | if '(' Expression ')' Statement else Statement {If $3 $5 (Just $7)}
-    | if '(' Expression ')' Statement %prec noelse {If $3 $5 Nothing}
-    | while '(' Expression ')' Statement {While $3 $5}
+    | if '(' Comparison ')' Statement else Statement {If $3 $5 (Just $7)}
+    | if '(' Comparison ')' Statement %prec noelse {If $3 $5 Nothing}
+    | while '(' Comparison ')' Statement {While $3 $5}
     | read '(' identifier ')' {Read $3}
     | up {Up}
     | down {Down}
@@ -69,10 +69,11 @@ Exp : identifier '=' Expression {Assignment $1 $3}
 
 Expression : Expression '+' Term {Plus $1 $3}
 	   | Expression '-' Term {Minus $1 $3}
-	   | Expression '==' Term {Equal $1 $3}
+       | identifier '(' Args {FunctionCall $1 $3}
+       | Term {$1}
+           
+Comparison : Expression '==' Term {Equal $1 $3}
 	   | Expression '<' Term {LessThan $1 $3}
-           | identifier '(' Args {FunctionCall $1 $3}
-           | Term {$1}
 
 Term : Term '*' Factor {Mult $1 $3}
      | Factor {$1}

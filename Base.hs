@@ -20,6 +20,8 @@ processVarDecs (v:vs) addrs table = (instr : instrs, addrs'')
     where
         (instr, addrs', table') = varDec v addrs table
         (instrs, addrs'') = processVarDecs vs addrs' table'
+        
+       
 
 exp :: Exp -> AddressScheme -> AddressTable -> (AddressTable, [Instruction])
 exp TurtleData.Up _ s = (s, [PDPlot.Up])
@@ -60,10 +62,13 @@ expression :: Expresssion -> AddressTable -> [Instruction]
 expression (Plus e1 e2) sym = [(expression e1 sym), (expression e2 sym) , Add]
 expression (Minus e1 e2) sym = [(expression e1 sym), (expression e2 sym) , Sub]
 expression (Mult e1 e2) sym = [(expression e1 sym), (expression e2 sym) , Mul]
-expression (Identifier str) sym = case getSymbol (SymbolTable.Identifier sym Nothing) sym of
-    Just 
-
--- Todo: Literal, Identifier, Function Call
+expression (Identifier str) sym = case getSymbol (SymbolTable.Identifier str Nothing) sym of
+    Just (off (Just mode)) -> [Load off mode]
+    Just (off Nothing) -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
+    Nothing -> error $ "Identifier " ++ str ++ " not found."
+expression (Literal i) _ = [Loadi i]
+expression (FunctionCall id args) = error "Don't know how to call functions, yet."
+-- Todo: Function Call
 expression _ _ = "Expression halp"
 
 comparison :: Comparison -> AddressTable -> [Instruction]

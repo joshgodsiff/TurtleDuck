@@ -203,5 +203,9 @@ compileExpression (T.Mult e1 e2) = do
     emit [P.Mul]
     currentAddress .+=1
 compileExpression (T.Literal i) = do
-    emit [P.Loadi i]    -- Do I need to do some conversion on i?
+    emit [P.Loadi (fromIntegral i)]
+    currentAddress .+= 1
+compileExpression (T.Identifier id) =  do
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
+    emit [P.Load (fromIntegral addr) from]
     currentAddress .+= 1

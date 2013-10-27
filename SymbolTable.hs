@@ -6,6 +6,7 @@ module SymbolTable
     ( Identifier (..)
     , showIdentifier
     , SymbolTable
+    , showTable
     , newSymbolTable
     , addSymbol
     , addSymbols
@@ -54,6 +55,10 @@ showIdentifier (Identifier name arity) =
 type NonEmptyList = Cofree Maybe
 
 type SymbolTable a = NonEmptyList (M.Map Identifier a)
+
+showTable :: Show a => SymbolTable a -> String
+showTable (t :< Nothing) = show t
+showTable (t :< (Just ts)) = show t ++ "\n" ++  showTable ts
 
 addSymbol :: Identifier -> a -> SymbolTable a -> SymbolTable a
 addSymbol key value (x :< xs) = M.insert key value x :< xs

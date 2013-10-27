@@ -8,6 +8,7 @@ module TurtleData
     , Statement (..)
     , Exp (..)
     , Expression (..)
+    , Comparison (..)
     ) where
 
 data Turtle = Turtle String [VarDec] [FunDec] Statement
@@ -44,3 +45,4 @@ data Expression = Plus Expression Expression
   
 data Comparison = Equal Expression Expression
         | LessThan Expression Expression
+    deriving Show

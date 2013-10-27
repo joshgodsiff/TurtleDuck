@@ -6,7 +6,7 @@ module PDPlot where
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as M
-import SymbolTable.Identifier
+import SymbolTable (Identifier)
 
 data TargetPointer = FP | GP
 
@@ -33,7 +33,7 @@ data Instruction = Load Int8 TargetPointer
 -- Not sure how this was supposed to work as an Int.
 type Label = Identifier
 
-type LookupTable = Map Int Int16
+type LookupTable = Map Label Int16
 
 -- A machine word is either a 16-bit integer or a label to be resolved later
 type MachineWord = Either Int16 Label

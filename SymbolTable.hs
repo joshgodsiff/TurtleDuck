@@ -8,6 +8,7 @@ module SymbolTable
     , SymbolTable
     , newSymbolTable
     , addSymbol
+    , addSymbols
     , getSymbol
     , pushScope
     , popScope

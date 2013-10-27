@@ -187,4 +187,21 @@ compileExp (T.Read x) = do
     emit [P.Read (fromIntegral addr) from]
     currentAddress .+=1
 
-compileExpression = undefined
+compileExpression (T.Plus e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Add]
+    currentAddress .+=1
+compileExpression (T.Minus e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub]
+    currentAddress .+=1
+compileExpression (T.Mult e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Mul]
+    currentAddress .+=1
+compileExpression (T.Literal i) = do
+    emit [P.Loadi i]    -- Do I need to do some conversion on i?
+    currentAddress .+= 1

@@ -12,7 +12,9 @@ type AddressTable  = SymbolTable AddressScheme
 
 turtle :: Turtle -> [Instruction]
 turtle (Turtle name vars funs sts) = 
-    (vdecIns, table) = processVarDecs vars (AddressScheme 1 GP) newSymbolTable
+    (vdecIns, table) = processVarDecs vars (AddressScheme 1 (Just GP)) newSymbolTable
+    (fdecIns, addr, table') processFunDecs funs (AddressScheme (length vdecIns) Nothing) table
+    
     
 processVarDecs :: [VarDec] -> AddressScheme -> AddressTable -> ([Instruction], AddressTable)
 processVarDecs :: [] _ table -> (table, [])

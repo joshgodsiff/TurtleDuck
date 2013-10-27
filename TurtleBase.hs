@@ -204,8 +204,20 @@ compileExpression (T.Mult e1 e2) = do
     currentAddress .+=1
 compileExpression (T.Literal i) = do
     emit [P.Loadi (fromIntegral i)]
-    currentAddress .+= 1
+    currentAddress .+= 2
 compileExpression (T.Identifier id) =  do
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Load (fromIntegral addr) from]
     currentAddress .+= 1
+compileExpression (T.FunctionCall id args) = undefined
+
+compileComparison (T.Equal e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub, P.Test, P.Pop 1]
+    currentAddress .+= 4    -- Sub + Test both 1, Pop is 2.
+compileComparison (T.LessThan e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub, P.Test, P.Pop 1]
+    currentAddress .+= 4

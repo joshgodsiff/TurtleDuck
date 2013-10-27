@@ -4,11 +4,12 @@
 module PDPlot where
 
 import Data.Int
+import Data.Word
 import Data.Map (Map)
 import qualified Data.Map as M
 import SymbolTable (Identifier)
 
-data TargetPointer = FP | GP
+data TargetPointer = FP | GP | PC
     deriving Show
 
 data Instruction = Load Int8 TargetPointer
@@ -41,6 +42,16 @@ type LookupTable = Map Label Int16
 type MachineWord = Either Int16 Label
 
 type Address = MachineWord
+
+instructionLength :: Instruction -> Int16
+instructionLength (Pop _) = 2
+instructionLength (Loadi _) = 2
+instructionLength (Jump _) = 2
+instructionLength (Jsr _) = 2
+instructionLength (Jeq _) = 2
+instructionLength (Jlt _) = 2
+instructionLength _ = 1
+
 
 toMachineCode :: Instruction -> [MachineWord]
 toMachineCode Halt         = [Left 0x0000]

@@ -32,7 +32,7 @@ varDec (VarDec ident (Just e)) address sym
     =   (expression e sym -- need to make sure that 'expression e' leaves its value in the right spot?
          , address {offset = (offset address) + 1}
          , (addSymbol (SymbolTable.Identifier ident Nothing) address sym))
-varDec _ _ _ = error "VarDec Halp"
+-- varDec _ _ _ = error "VarDec Halp"
         
 processFunDecs :: [FunDec] -> AddressScheme -> AddressTable -> ([Instruction], AddressScheme, AddressTable)
 processFunDecs [] addr table = ([], addr, table)
@@ -66,10 +66,10 @@ exp TurtleData.Up _ s       = [PDPlot.Up]
 exp TurtleData.Down _ s     = [PDPlot.Down]
 exp (MoveTo e1 e2) _ sym    = (expression e1 sym) ++ (expression e2 sym) ++ [Move]
 exp (If cond thenBlock elseBlock) addr sym
-    = preThen ++ thenInstr ++ [Jump (fromIntegral (offset addr''))] ++ elseInstr
+    = preThen ++ thenInstr ++ [Jump $ Left $ fromIntegral $ offset addr''] ++ elseInstr
     where
         condInstr = comparison cond sym
-        preThen = condInstr ++ thenJump ++ [Jump (fromIntegral (offset addr'))] -- +1?
+        preThen = condInstr ++ thenJump ++ [Jump $ Left $ fromIntegral $ offset addr'] -- +1?
         thenStart = (addr {offset = (offset addr) + (length preThen)})
         (thenInstr, addr')
             = statement thenBlock thenStart sym
@@ -77,8 +77,8 @@ exp (If cond thenBlock elseBlock) addr sym
             Nothing -> ([], addr')
             Just s -> (statement s (addr' {offset = (offset addr') + (length thenInstr) + 1}) sym)
         thenJump = case cond of
-            (Equal _ _) -> [Jeq (fromIntegral (offset thenStart))]
-            (LessThan _ _) -> [Jlt (fromIntegral (offset thenStart))]
+            (Equal _ _) -> [Jeq $ Left $ fromIntegral $ offset thenStart]
+            (LessThan _ _) -> [Jlt $ Left $ fromIntegral $ offset thenStart]
 exp (While cond codeBlock) addr sym = error "While Halp"
 exp (TurtleData.Read str) addr sym = error "Read Halp"
 exp _ _ _ = error "Exp Halp"
@@ -105,7 +105,7 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
 expression (Literal i) _            = [Loadi (fromIntegral i)]
 expression (FunctionCall id args) sym  = error "Don't know how to call functions, yet."
 -- Todo: Function Call
-expression _ _ = error "Expression halp"
+-- expression _ _ = error "Expression halp"
 
 comparison :: Comparison -> AddressTable -> [Instruction]
 comparison (Equal e1 e2) sym = (expression e1 sym) ++ (expression e2 sym) ++ [Sub, Test, (Pop 1)]

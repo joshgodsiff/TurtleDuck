@@ -8,6 +8,7 @@ import TurtleData
 import SymbolTable
 
 data AddressScheme = AddressScheme {offset :: Int, from :: Maybe TargetPointer}
+    deriving Show
 type AddressTable  = SymbolTable AddressScheme
 
 turtle :: Turtle -> [Instruction]
@@ -55,11 +56,11 @@ funDec (FunDec id args vars body) addr parentTable = varInstrs ++ bodyInstrs
 processArgs :: [String] -> AddressScheme -> AddressTable -> AddressTable
 processArgs args addr table = addSymbols keyVals table
     where
-        addrMap = map (\x -> (AddressScheme x (Just FP))) [-((length args) - 1) .. (-1)]
-        idMap = map (\x -> (SymbolTable.Identifier x (Just 0))) args
+        addrMap = map (\x -> (AddressScheme x (Just FP))) [(-(length args) - 1) .. (-1)]
+        idMap = map (\x -> (SymbolTable.Identifier x Nothing)) args
         keyVals 
             = (SymbolTable.Identifier "return" Nothing, 
-            AddressScheme (-((length args) - 2)) (Just FP))
+            AddressScheme (-(length args) - 2) (Just FP))
             : (zip idMap addrMap)
         
 exp :: Exp -> AddressScheme -> AddressTable -> [Instruction]
@@ -122,7 +123,8 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
     Just (AddressScheme off (Just mode)) -> [Load (fromIntegral off) mode]
     Just (AddressScheme off Nothing) 
         -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
-    Nothing -> error $ "Identifier " ++ str ++ " not found."
+    Nothing -> error $ "Error in parsing identifier expression: Identifier " ++ str ++ " not found."
+        ++ " Table: \r\n" ++ showTable sym
 expression (Literal i) _            = [Loadi (fromIntegral i)]
 expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn]
     where

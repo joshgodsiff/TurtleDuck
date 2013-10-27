@@ -46,7 +46,7 @@ processFunDecs (f@(FunDec id args _ _):fs) addr table = (instr ++ instrs, addr',
             = processFunDecs fs (addr {offset = (offset addr) + (length instr)}) table'
 
 funDec :: FunDec -> AddressScheme -> AddressTable -> [Instruction]
-funDec (FunDec id args vars body) addr parentTable = varInstrs ++ bodyInstrs
+funDec (FunDec id args vars body) addr parentTable = varInstrs ++ bodyInstrs ++ [Rts]
     where
     table       = pushScope parentTable
     argTable    = processArgs args addr table
@@ -104,7 +104,7 @@ exp (Assignment id e) addr sym = case getSymbol (SymbolTable.Identifier id Nothi
     Just (AddressScheme off Nothing)
         -> error $ "Error: Variable " ++ id ++ " has an address in static memory"
 -- Same as the Expression version. Should merge them somehow.
-exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn]
+exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn, Pop $ fromIntegral $ length args]
     where
         argIns = concatMap (flip expression sym) args
         maybeFn = case getSymbol (SymbolTable.Identifier id (Just $ length args)) sym of
@@ -112,7 +112,14 @@ exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn]
             Just (AddressScheme addr Nothing) -> Jsr $ Left $ fromIntegral addr
             Just (AddressScheme addr (Just foo))
                 -> error "Something when horribly wrong trying to address a function."
-exp _ _ _ = error "Exp Halp"
+exp (Return e) addr sym = eInstr ++ [Store (fromIntegral returnAddr) FP, Rts]
+    where
+        returnID =  getSymbol (SymbolTable.Identifier "return" Nothing) sym
+        returnAddr = case returnID of
+            Nothing -> error "Compiler Error: Function does not have a return address (wot?!)"
+            Just (AddressScheme off (Just FP)) -> off
+            _ -> error "Compiler Error: Function has bad return address."
+        eInstr = expression e sym
 
 -- Pretty sure Statements can't change the address table? So don't need to return it.
 statement :: Statement -> AddressScheme -> AddressTable -> ([Instruction], AddressScheme)
@@ -135,7 +142,7 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
     Nothing -> error $ "Error in parsing identifier expression: Identifier " ++ str ++ " not found."
 expression (Literal i) _            = [Loadi (fromIntegral i)]
 -- TODO: Return result.
-expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn]
+expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn, Pop $ fromIntegral $ length args]
     where
         argIns = concatMap (flip expression sym) args
         maybeFn = case getSymbol (SymbolTable.Identifier id (Just $ length args)) sym of

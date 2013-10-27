@@ -97,15 +97,15 @@ expression :: Expression -> AddressTable -> [Instruction]
 expression (Plus e1 e2) sym         = (expression e1 sym) ++ (expression e2 sym) ++ [Add]
 expression (Minus e1 e2) sym        = (expression e1 sym) ++ (expression e2 sym) ++ [Sub]
 expression (Mult e1 e2) sym         = (expression e1 sym) ++ (expression e2 sym) ++ [Mul]
-expression (SymbolTable.Identifier str) sym     = case getSymbol (SymbolTable.Identifier str Nothing) sym of
-    Just (AddressScheme off (Just mode)) -> [Load off mode]
+expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Identifier str Nothing) sym of
+    Just (AddressScheme off (Just mode)) -> [Load (fromIntegral off) mode]
     Just (AddressScheme off Nothing) 
         -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
     Nothing -> error $ "Identifier " ++ str ++ " not found."
-expression (Literal i) _            = [Loadi i]
+expression (Literal i) _            = [Loadi (fromIntegral i)]
 expression (FunctionCall id args) sym  = error "Don't know how to call functions, yet."
 -- Todo: Function Call
-expression _ _ = "Expression halp"
+expression _ _ = error "Expression halp"
 
 comparison :: Comparison -> AddressTable -> [Instruction]
 comparison (Equal e1 e2) sym = (expression e1 sym) ++ (expression e2 sym) ++ [Sub, Test, (Pop 1)]

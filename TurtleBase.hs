@@ -191,6 +191,11 @@ compileExp (T.Return e) = do
     returnAddr <- -- Need some way of getting this.
     emit [Store returnAddr FP, Rts]
     currentAddress .+= 2
+compileExp (T.Assignment id e) = do
+    compileExpression e
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
+    emit [Store (fromIntegral addr) from]
+    currentAddress .+= 1
 
 compileExpression (T.Plus e1 e2) = do
     compileExpression e1

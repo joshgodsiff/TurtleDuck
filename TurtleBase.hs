@@ -183,15 +183,18 @@ compileExp (T.MoveTo x y) = do
     emit [P.Move]
     currentAddress .+=1
 compileExp (T.Read x) = do
+    -- TODO: Throw error on undeclared x
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Read (fromIntegral addr) from]
     currentAddress .+=1
 compileExp (T.Return e) = do
+    -- TODO: Throw error if we attempt to return from main.
     compileExpression e
     returnAddr <- -- Need some way of getting this.
     emit [Store returnAddr FP, Rts]
     currentAddress .+= 2
 compileExp (T.Assignment id e) = do
+    -- TODO: Throw error on undeclared id
     compileExpression e
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [Store (fromIntegral addr) from]
@@ -216,6 +219,7 @@ compileExpression (T.Literal i) = do
     emit [P.Loadi (fromIntegral i)]
     currentAddress .+= 2
 compileExpression (T.Identifier id) =  do
+    -- TODO: Throw error on undeclared id
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Load (fromIntegral addr) from]
     currentAddress .+= 1

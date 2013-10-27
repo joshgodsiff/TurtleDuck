@@ -103,6 +103,15 @@ exp (Assignment id e) addr sym = case getSymbol (SymbolTable.Identifier id Nothi
             eInstr = (expression e sym)
     Just (AddressScheme off Nothing)
         -> error $ "Error: Variable " ++ id ++ " has an address in static memory"
+-- Same as the Expression version. Should merge them somehow.
+exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn]
+    where
+        argIns = concatMap (flip expression sym) args
+        maybeFn = case getSymbol (SymbolTable.Identifier id (Just $ length args)) sym of
+            Nothing -> Jsr $ Right $ (SymbolTable.Identifier id (Just $ length args))
+            Just (AddressScheme addr Nothing) -> Jsr $ Left $ fromIntegral addr
+            Just (AddressScheme addr (Just foo))
+                -> error "Something when horribly wrong trying to address a function."
 exp _ _ _ = error "Exp Halp"
 
 -- Pretty sure Statements can't change the address table? So don't need to return it.
@@ -124,8 +133,8 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
     Just (AddressScheme off Nothing) 
         -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
     Nothing -> error $ "Error in parsing identifier expression: Identifier " ++ str ++ " not found."
-        ++ " Table: \r\n" ++ showTable sym
 expression (Literal i) _            = [Loadi (fromIntegral i)]
+-- TODO: Return result.
 expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn]
     where
         argIns = concatMap (flip expression sym) args

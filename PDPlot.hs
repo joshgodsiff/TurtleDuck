@@ -6,6 +6,7 @@ module PDPlot where
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as M
+import SymbolTable.Identifier
 
 data TargetPointer = FP | GP
 
@@ -29,7 +30,8 @@ data Instruction = Load Int8 TargetPointer
                  | Jsr Address
                  | Rts
 
-type Label = Int
+-- Not sure how this was supposed to work as an Int.
+type Label = Identifier
 
 type LookupTable = Map Int Int16
 

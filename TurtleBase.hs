@@ -11,6 +11,7 @@ import qualified Data.Map as M
 import Data.Int
 import Control.Monad
 import Data.Maybe
+import Data.Array
 
 data AddressScheme = AddressScheme {offset :: Int16, from :: P.TargetPointer}
                    | LinkLater 
@@ -26,7 +27,7 @@ data TurtleState = TurtleState (DList P.Instruction)
 type DList a = [a] -> [a]
 
 append :: a -> DList a -> DList a
-append x xs = (x:) . xs
+append x xs =  xs . (x:)
 
 -- This is really just an instance of the state monad, but in the interests
 -- of keeping dependencies down
@@ -123,9 +124,14 @@ turtle :: T.Turtle -> TurtleCompilation ()
 turtle (T.Turtle name vars funs stmts) = do 
     getFunctionNames funs
     compileGlobalVariables vars
+    endOfGlobals <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
     compileFunctions funs
+    endOfFunctions <- valueOf currentAddress
+    backpatch endOfGlobals [P.Jump (Left endOfFunctions)]
     compileStatements stmts
 
+backpatch = undefined
 
 getFunctionNames :: [T.FunDec] -> TurtleCompilation ()
 getFunctionNames funs = forM_ funs $
@@ -164,7 +170,6 @@ compileLocalVariables decs = forM_ (zip [1..] decs) $
         case def of
            Nothing -> do
                emit [P.Loadi 0]
-               currentAddress .+= 2
            Just x -> compileExpression x
         symbolTable.symbol (Sym.Identifier ident Nothing) .= AddressScheme val P.FP
         
@@ -176,15 +181,62 @@ compileExp T.Up = do
     currentAddress .+= 1
 compileExp T.Down = do
     emit [P.Down]
-    currentAddress .+=1
 compileExp (T.MoveTo x y) = do
     compileExpression x
     compileExpression y
     emit [P.Move]
-    currentAddress .+=1
 compileExp (T.Read x) = do
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Read (fromIntegral addr) from]
-    currentAddress .+=1
+compileExp (T.Assignment id exp) = do
+    compileExpression exp
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
+    emit [P.Store (fromIntegral addr) from]
+compileExp (T.If cond thenblock elseblock) = do
+    compileComparison
+    startAddress <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
+    compileExp thenblock
+    exitAddress <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
+    midAddress <- valueOf currentAddress
+    compileExp elseblock
+    endAddress <- valueOf currentAddress
+    case cond of
+        (LessThan _ _) -> backPatch  [P.Jlt (Left midAddress)]
+        (Equal _ _) -> backPatch [P.Jeq (Left midAddress)]
+    backPatch exitAddress [P.Jump (Left endAddress)]
+    
+compileExp _ = error "Exp not yet fully implemented"
 
-compileExpression = undefined
+compileComparison (T.Equal e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub, P.Test, P.Pop 1]
+compileComparison (T.LessThan e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub, P.Test, P.Pop 1]
+    
+compileExpression (T.Plus e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Add]
+compileExpression (T.Minus e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Sub]
+compileExpression (T.Mult e1 e2) = do
+    compileExpression e1
+    compileExpression e2
+    emit [P.Mul]
+compileExpression (T.Literal i) = do
+    emit [P.Loadi (fromIntegral i)]
+compileExpression (T.Identifier id) = do
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
+    emit [P.Load (fromIntegral addr) from]
+compileExpression (T.FunctionCall id args) = do
+    emit [P.Loadi 0]
+    forM_ args compileExpression
+    (AddressScheme addr P.PC) <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
+    emit [P.Jsr (Left addr)]

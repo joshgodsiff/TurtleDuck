@@ -104,7 +104,7 @@ exp (Assignment id e) addr sym = case getSymbol (SymbolTable.Identifier id Nothi
     Just (AddressScheme off Nothing)
         -> error $ "Error: Variable " ++ id ++ " has an address in static memory"
 -- Same as the Expression version. Should merge them somehow.
-exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn, Pop $ fromIntegral $ length args]
+exp (ExpFunctionCall id args) addr sym = (Loadi 0) : argIns ++ [maybeFn, Pop $ fromIntegral $ length args + 1]
     where
         argIns = concatMap (flip expression sym) args
         maybeFn = case getSymbol (SymbolTable.Identifier id (Just $ length args)) sym of

@@ -57,6 +57,10 @@ type SymbolTable a = NonEmptyList (M.Map Identifier a)
 addSymbol :: Identifier -> a -> SymbolTable a -> SymbolTable a
 addSymbol key value (x :< xs) = M.insert key value x :< xs
 
+addSymbols :: [(Identifier, a)] -> SymbolTable a -> SymbolTable a
+addSymbols [] t = t
+addSymbols ((k,v):kvs) table = addSymbols kvs (addSymbol k v table)
+
 getSymbol :: Identifier -> SymbolTable a -> Maybe a
 getSymbol key (x :< xs) = maybe
     (maybe Nothing (getSymbol key) xs) -- Check next scope if possible

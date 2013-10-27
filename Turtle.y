@@ -100,6 +100,6 @@ Args1 : ')' {[]}
 -- We build the parse tree so we can check this works
 -- this won't be here in the final version
 
-main = getContents >>= turtle . parseTurtle . Tok.alexScanTokens
+main = getContents >>= print . turtle . parseTurtle . Tok.alexScanTokens
 }
 

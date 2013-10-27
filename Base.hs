@@ -79,8 +79,21 @@ exp (If cond thenBlock elseBlock) addr sym
         thenJump = case cond of
             (Equal _ _) -> [Jeq $ Left $ fromIntegral $ offset thenStart]
             (LessThan _ _) -> [Jlt $ Left $ fromIntegral $ offset thenStart]
-exp (While cond codeBlock) addr sym = error "While Halp"
-exp (TurtleData.Read str) addr sym = error "Read Halp"
+exp (While cond codeBlock) addr sym
+    = preLoop ++ loopBody ++ [Jump $ Left $ fromIntegral $ offset addr]
+    where
+        condInstr = comparison cond sym
+        preLoop = condInstr ++ loopJump ++ [Jump $ Left $ fromIntegral $ offset addr' + 2] -- The jump statement is two words
+        loopStart = (addr {offset = (offset addr) + (length preLoop)})
+        (loopBody, addr') = statement codeBlock loopStart sym 
+        loopJump = case cond of
+            (Equal _ _) -> [Jeq $ Left $ fromIntegral $ offset loopStart]
+            (LessThan _ _) -> [Jlt $ Left $ fromIntegral $ offset loopStart]
+exp (TurtleData.Read str) addr sym = case getSymbol (SymbolTable.Identifier str Nothing) sym of
+     Just (AddressScheme off (Just mode)) -> [PDPlot.Read (fromIntegral off) mode]
+     Just (AddressScheme off Nothing) 
+         -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
+     Nothing -> error $ "Identifier " ++ str ++ " not found."
 exp _ _ _ = error "Exp Halp"
 
 -- Pretty sure Statements can't change the address table? So don't need to return it.

@@ -119,11 +119,11 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
 expression (Literal i) _            = [Loadi (fromIntegral i)]
 expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn]
     where
-        argIns = map (flip expression sym) args
-        maybeFn = case getSymbol (SymbolTable.Identifier id (length args)) sym of
-            Nothing -> Jsr $ Right $ SymbolTable.Identifier id (length args)
-            Just (AddressScheme addr Nothing) -> Jsr (offset addr)
-            Just (AddressScheme addr Just foo)
+        argIns = concatMap (flip expression sym) args
+        maybeFn = case getSymbol (SymbolTable.Identifier id (Just $ length args)) sym of
+            Nothing -> Jsr $ Right $ (SymbolTable.Identifier id (Just $ length args))
+            Just (AddressScheme addr Nothing) -> Jsr $ Left $ fromIntegral addr
+            Just (AddressScheme addr (Just foo))
                 -> error "Something when horribly wrong trying to address a function."
 -- Todo: Function Call
 -- expression _ _ = error "Expression halp"

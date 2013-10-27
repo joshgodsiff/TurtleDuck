@@ -95,6 +95,13 @@ exp (TurtleData.Read str) addr sym = case getSymbol (SymbolTable.Identifier str 
      Just (AddressScheme off Nothing) 
          -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
      Nothing -> error $ "Identifier " ++ str ++ " not found."
+exp (Assignment id e) addr sym = case getSymbol (SymbolTable.Identifier id Nothing) sym of
+    Nothing -> error $ "Identifier " ++ id ++ " not found."
+    Just (AddressScheme off (Just pointer)) -> eInstr ++ [Store (fromIntegral off) pointer]
+        where
+            eInstr = (expression e sym)
+    Just (AddressScheme off Nothing) 
+        -> error $ "Error: Variable " ++ id ++ " has an address in static memory"
 exp _ _ _ = error "Exp Halp"
 
 -- Pretty sure Statements can't change the address table? So don't need to return it.

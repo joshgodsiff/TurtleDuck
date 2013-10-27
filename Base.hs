@@ -45,7 +45,7 @@ processFunDecs (f@(FunDec id args _ _):fs) addr table = (instr ++ instrs, addr',
             = processFunDecs fs (addr {offset = (offset addr) + (length instr)}) table'
 
 funDec :: FunDec -> AddressScheme -> AddressTable -> [Instruction]
-funDec (FunDec id args vars body) addr parentTable = (Loadi 0) : varInstrs ++ bodyInstrs
+funDec (FunDec id args vars body) addr parentTable = varInstrs ++ bodyInstrs
     where
     table       = pushScope parentTable
     argTable    = processArgs args addr table
@@ -104,7 +104,14 @@ expression (TurtleData.Identifier str) sym     = case getSymbol (SymbolTable.Ide
         -> error $ "Compiler error: Addressing mode for identifier " ++ str ++ " not set." 
     Nothing -> error $ "Identifier " ++ str ++ " not found."
 expression (Literal i) _            = [Loadi (fromIntegral i)]
-expression (FunctionCall id args) sym  = error "Don't know how to call functions, yet."
+expression (FunctionCall id args) sym  = (Loadi 0) : argIns ++ [maybeFn]
+    where
+        argIns = map (flip expression sym) args
+        maybeFn = case getSymbol (SymbolTable.Identifier id (length args)) sym of
+            Nothing -> Jsr $ Right $ SymbolTable.Identifier id (length args)
+            Just (AddressScheme addr Nothing) -> Jsr (offset addr)
+            Just (AddressScheme addr Just foo)
+                -> error "Something when horribly wrong trying to address a function."
 -- Todo: Function Call
 -- expression _ _ = error "Expression halp"
 

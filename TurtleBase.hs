@@ -120,12 +120,13 @@ emit instructions = forM_ instructions $ \instruction -> do
     currentAddress .+= P.instructionLength instruction
 
 turtle :: T.Turtle -> TurtleCompilation ()
-turtle (T.Turtle name vars funs stmts) = do 
+turtle (T.Turtle name vars funs stmts) = do
+    -- TODO: Jump to main
     getFunctionNames funs
     compileGlobalVariables vars
     compileFunctions funs
     compileStatements stmts
-
+    emit [Halt] -- Is it necessary to increment current address after this?
 
 getFunctionNames :: [T.FunDec] -> TurtleCompilation ()
 getFunctionNames funs = forM_ funs $

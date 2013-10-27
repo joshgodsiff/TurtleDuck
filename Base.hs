@@ -11,10 +11,11 @@ data AddressScheme = AddressScheme {offset :: Int, from :: Maybe TargetPointer}
 type AddressTable  = SymbolTable AddressScheme
 
 turtle :: Turtle -> [Instruction]
-turtle (Turtle name vars funs sts) = error "How do I Turtle?"
+turtle (Turtle name vars funs sts) = vdecIns ++ fdecIns ++ stmtIns
     where
     (vdecIns, table) = processVarDecs vars (AddressScheme 1 (Just GP)) newSymbolTable
     (fdecIns, addr, table') = processFunDecs funs (AddressScheme (length vdecIns) Nothing) table
+    (stmtIns, _) = statement sts (addr {offset = offset addr + 1}) table'
 
 processVarDecs :: [VarDec] -> AddressScheme -> AddressTable -> ([Instruction], AddressTable)
 processVarDecs [] _ table = ([], table)

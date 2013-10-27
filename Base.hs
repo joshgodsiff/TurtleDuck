@@ -100,7 +100,7 @@ exp (Assignment id e) addr sym = case getSymbol (SymbolTable.Identifier id Nothi
     Just (AddressScheme off (Just pointer)) -> eInstr ++ [Store (fromIntegral off) pointer]
         where
             eInstr = (expression e sym)
-    Just (AddressScheme off Nothing) 
+    Just (AddressScheme off Nothing)
         -> error $ "Error: Variable " ++ id ++ " has an address in static memory"
 exp _ _ _ = error "Exp Halp"
 

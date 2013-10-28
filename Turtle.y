@@ -11,7 +11,7 @@ import qualified Data.Map as M
 
 %name parseTurtle 
 %tokentype {Token}
-%error {error . show}
+%error {error "Lexical error" }
 %token
     turtle    {Tok.Turtle}
     var       {Tok.Var}

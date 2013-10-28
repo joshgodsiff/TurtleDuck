@@ -13,6 +13,7 @@ module SymbolTable
     , getSymbol
     , pushScope
     , popScope
+    , Cofree ((:<))
     ) where
 
 import Data.Map (Map)

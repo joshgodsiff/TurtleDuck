@@ -11,7 +11,7 @@ import qualified Data.Map as M
 import Data.Int
 import Control.Monad
 import Data.Maybe
-import Data.Array
+import Data.List
 
 data AddressScheme = AddressScheme {offset :: Int16, from :: P.TargetPointer}
                    | LinkLater 
@@ -162,8 +162,10 @@ getFunctionNames funs = forM_ funs $
     \(T.FunDec name _ args _) -> do
         symbolTable.symbol (Sym.Identifier name (Just (length args))) .= LinkLater 
 
+checkArgs decs = let x = (map (\(T.VarDec ident _) -> ident) decs) in if length x /= length (nub x) then (error $ "Variable declared twice in function") else return ()
+        
 compileGlobalVariables :: [T.VarDec] -> TurtleCompilation ()
-compileGlobalVariables decs = forM_ decs $
+compileGlobalVariables decs = checkArgs decs >> forM_ decs $
     \(T.VarDec ident def) -> do
         case def of
            Nothing -> do
@@ -176,6 +178,7 @@ compileGlobalVariables decs = forM_ decs $
 compileFunctions :: [T.FunDec] -> TurtleCompilation ()
 compileFunctions funs = forM_ funs $
    \(T.FunDec id args vars body) -> do
+        if length args /= length (nub args) then (error $ "Argument in function " ++ (show id) ++ " used twice") else return ()
         funAddr <- valueOf currentAddress
         symbolTable.symbol (Sym.Identifier id (Just (length args))) .= AddressScheme funAddr P.PC
         symbolTable .$ Sym.pushScope
@@ -193,7 +196,7 @@ compileArgs args = do
         \(pos, arg) -> symbolTable.symbol (Sym.Identifier arg Nothing) .= AddressScheme pos P.FP
 
 compileLocalVariables :: [T.VarDec] -> TurtleCompilation ()
-compileLocalVariables decs = forM_ (zip [1..] decs) $
+compileLocalVariables decs = checkArgs decs >> forM_ (zip [1..] decs) $
     \(val, T.VarDec ident def) -> do
         case def of
            Nothing -> do

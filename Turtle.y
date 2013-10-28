@@ -102,6 +102,6 @@ Args1 : ')' {[]}
 -- We build the parse tree so we can check this works
 -- this won't be here in the final version
 
-main = getContents >>= mapM_ print . (flip assemble M.empty) . runTurtle . parseTurtle . Tok.alexScanTokens
+main = getContents >>= mapM_ print . assemble . runTurtle . parseTurtle . Tok.alexScanTokens
 }
 

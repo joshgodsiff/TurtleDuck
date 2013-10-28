@@ -8,6 +8,7 @@ import Data.Word
 import Data.Map (Map)
 import qualified Data.Map as M
 import SymbolTable (Identifier)
+import Data.Bits
 
 data TargetPointer = FP | GP | PC
     deriving Show
@@ -63,12 +64,12 @@ toMachineCode Neg          = [Left 0x2200]
 toMachineCode Mul          = [Left 0x1400]
 toMachineCode Test         = [Left 0x1600]
 toMachineCode Rts          = [Left 0x2800]
-toMachineCode (Load  x GP) = [Left (0x0600 + (fromIntegral x))]
-toMachineCode (Load  x FP) = [Left (0x0700 + (fromIntegral x))]
-toMachineCode (Store x GP) = [Left (0x0400 + (fromIntegral x))]
-toMachineCode (Store x FP) = [Left (0x0500 + (fromIntegral x))]
-toMachineCode (Read  x GP) = [Left (0x0200 + (fromIntegral x))]
-toMachineCode (Read  x FP) = [Left (0x0300 + (fromIntegral x))]
+toMachineCode (Load  x GP) = [Left (0x0600 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
+toMachineCode (Load  x FP) = [Left (0x0700 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
+toMachineCode (Store x GP) = [Left (0x0400 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
+toMachineCode (Store x FP) = [Left (0x0500 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
+toMachineCode (Read  x GP) = [Left (0x0200 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
+toMachineCode (Read  x FP) = [Left (0x0300 .|. (fromIntegral (fromIntegral x :: Word8) :: Int16))]
 toMachineCode (Jsr   x)    = [Left 0x6800, x]
 toMachineCode (Jump  x)    = [Left 0x7000, x]
 toMachineCode (Jeq   x)    = [Left 0x7200, x]
@@ -83,5 +84,5 @@ resolveLabels (Right x) t = case M.lookup x t of
     Just y -> y
     Nothing -> error $ "Label " ++ (show x) ++ " not found"
 
-assemble :: [Instruction] -> LookupTable -> [Int16]
-assemble x t = map (flip resolveLabels t) $ concatMap toMachineCode x
+assemble :: [Instruction] -> [Int16]
+assemble x = map (\(Left x) -> x) $ concatMap toMachineCode x

@@ -122,7 +122,7 @@ emit instructions = forM_ instructions $ \instruction -> do
 
 runTurtle :: T.Turtle -> [P.Instruction]
 runTurtle t = (snd (runTurtleCompilation (turtle t)
-    (TurtleState id Sym.newSymbolTable M.empty 0 (Pointer 0 0))) ^. instructionList) []
+    (TurtleState id Sym.newSymbolTable M.empty 0 (Pointer 1 0))) ^. instructionList) []
     
 turtle :: T.Turtle -> TurtleCompilation ()
 turtle (T.Turtle name vars funs stmts) = do 
@@ -131,11 +131,14 @@ turtle (T.Turtle name vars funs stmts) = do
     endOfGlobals <- valueOf currentAddress
     emit [P.Jump (Left 0)]
     compileFunctions funs
+    linkFunctions
     endOfFunctions <- valueOf currentAddress
     backpatch endOfGlobals (P.Jump (Left endOfFunctions))
     compileStatements stmts
     emit [P.Halt]
 
+-- linkFunctions :: 
+    
 backpatch :: Int16 -> P.Instruction -> TurtleCompilation ()
 backpatch pos instr = instructionList .$ (backpatch' pos instr .)
 
@@ -173,10 +176,12 @@ compileFunctions funs = forM_ funs $
         symbolTable .$ Sym.popScope
         emit [P.Rts]
         return () 
-       
+
 compileArgs :: [String] -> TurtleCompilation ()
-compileArgs args = forM_ (zip [-(fromIntegral $ length args) - 1..] args) $
-    \(pos, arg) -> symbolTable.symbol (Sym.Identifier arg Nothing) .= AddressScheme pos P.FP
+compileArgs args = do
+    symbolTable.symbol (Sym.Identifier "return" Nothing) .= AddressScheme (fromIntegral (-(length args) - 2)) P.FP
+    forM_ (zip [-(fromIntegral $ length args) - 1..] args) $
+        \(pos, arg) -> symbolTable.symbol (Sym.Identifier arg Nothing) .= AddressScheme pos P.FP
 
 compileLocalVariables :: [T.VarDec] -> TurtleCompilation ()
 compileLocalVariables decs = forM_ (zip [1..] decs) $
@@ -186,7 +191,7 @@ compileLocalVariables decs = forM_ (zip [1..] decs) $
                emit [P.Loadi 0]
            Just x -> compileExpression x
         symbolTable.symbol (Sym.Identifier ident Nothing) .= AddressScheme val P.FP
-        
+
 compileStatements (T.Statement exp) = compileExp exp
 compileStatements (T.Statements stmts) = mapM_ compileStatements stmts
 
@@ -209,6 +214,9 @@ compileExp (T.If cond thenblock elseblock) = do
     compileComparison cond
     startAddress <- valueOf currentAddress
     emit [P.Jump (Left 0)]
+    elseStuff <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
+    thenAddress <- valueOf currentAddress
     compileStatements thenblock
     exitAddress <- valueOf currentAddress
     emit [P.Jump (Left 0)]
@@ -216,9 +224,10 @@ compileExp (T.If cond thenblock elseblock) = do
     maybe (return ()) compileStatements elseblock
     endAddress <- valueOf currentAddress
     case cond of
-        (T.LessThan _ _) -> backpatch startAddress (P.Jlt (Left midAddress))
-        (T.Equal _ _) -> backpatch startAddress (P.Jeq (Left midAddress))
+        (T.LessThan _ _) -> backpatch startAddress (P.Jlt (Left thenAddress))
+        (T.Equal _ _) -> backpatch startAddress (P.Jeq (Left thenAddress))
     backpatch exitAddress (P.Jump (Left endAddress))
+    backpatch elseStuff (P.Jump (Left midAddress))
 compileExp (T.While cond loopbody) = do
     loopBody <- valueOf currentAddress
     compileComparison cond
@@ -237,9 +246,15 @@ compileExp (T.While cond loopbody) = do
 compileExp (T.ExpFunctionCall id args) = do
     emit [P.Loadi 0]
     forM_ args compileExpression
-    (AddressScheme addr P.PC) <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
-    emit [P.Jsr (Left addr)]
-    emit [P.Pop (fromIntegral $ length args)]
+    scheme <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
+    case scheme of
+        (AddressScheme addr P.PC) -> emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]
+        LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args)]
+    emit [P.Pop $ (fromIntegral $ length args) + 1]
+compileExp (T.Return exp) = do
+    compileExpression exp
+    (AddressScheme addr P.FP) <- valueOf (symbolTable.symbol(Sym.Identifier "return" Nothing))
+    emit [P.Store (fromIntegral addr) P.FP, P.Rts]
     
 compileComparison (T.Equal e1 e2) = do
     compileExpression e1
@@ -270,5 +285,10 @@ compileExpression (T.Identifier id) = do
 compileExpression (T.FunctionCall id args) = do
     emit [P.Loadi 0]
     forM_ args compileExpression
-    (AddressScheme addr P.PC) <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
-    emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]
+    scheme <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
+    case scheme of
+        (AddressScheme addr P.PC) -> emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]
+        LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args)]
+    emit [P.Pop $ fromIntegral $ length args]
+
+                

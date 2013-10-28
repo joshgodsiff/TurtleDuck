@@ -4,7 +4,9 @@ module Main where
 import Lexer (Token)
 import qualified Lexer as Tok
 import TurtleData
-import Base
+import TurtleBase
+import PDPlot (assemble)
+import qualified Data.Map as M
 }
 
 %name parseTurtle 
@@ -100,6 +102,6 @@ Args1 : ')' {[]}
 -- We build the parse tree so we can check this works
 -- this won't be here in the final version
 
-main = getContents >>= print . turtle . parseTurtle . Tok.alexScanTokens
+main = getContents >>= mapM_ print . (flip assemble M.empty) . runTurtle . parseTurtle . Tok.alexScanTokens
 }
 

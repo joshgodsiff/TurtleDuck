@@ -120,6 +120,10 @@ emit instructions = forM_ instructions $ \instruction -> do
     instructionList .$ append instruction
     currentAddress .+= P.instructionLength instruction
 
+runTurtle :: T.Turtle -> [P.Instruction]
+runTurtle t = (snd (runTurtleCompilation (turtle t)
+    (TurtleState id Sym.newSymbolTable M.empty 0 (Pointer 0 0))) ^. instructionList) []
+    
 turtle :: T.Turtle -> TurtleCompilation ()
 turtle (T.Turtle name vars funs stmts) = do 
     getFunctionNames funs
@@ -128,10 +132,18 @@ turtle (T.Turtle name vars funs stmts) = do
     emit [P.Jump (Left 0)]
     compileFunctions funs
     endOfFunctions <- valueOf currentAddress
-    backpatch endOfGlobals [P.Jump (Left endOfFunctions)]
+    backpatch endOfGlobals (P.Jump (Left endOfFunctions))
     compileStatements stmts
+    emit [P.Halt]
 
-backpatch = undefined
+backpatch :: Int16 -> P.Instruction -> TurtleCompilation ()
+backpatch pos instr = instructionList .$ (backpatch' pos instr .)
+
+backpatch' :: Int16 -> P.Instruction -> [P.Instruction] -> [P.Instruction]
+backpatch' _ n [] = error $ "Oh shit we fucked up the backpatch " ++ show n ++ " still to go"
+backpatch' n _ _ | n < 0 = error "Oh shit we fucked up the backpatch; they don't add up"
+backpatch' 0 y (x:xs) = (y:xs)
+backpatch' n y (x:xs) = x: (backpatch' (n - P.instructionLength x) y xs)
 
 getFunctionNames :: [T.FunDec] -> TurtleCompilation ()
 getFunctionNames funs = forM_ funs $
@@ -144,7 +156,6 @@ compileGlobalVariables decs = forM_ decs $
         case def of
            Nothing -> do
                emit [P.Loadi 0]
-               currentAddress .+= 2
            Just x -> compileExpression x
         varAddr <- valueOf (pointer.global)
         symbolTable.symbol (Sym.Identifier ident Nothing) .= AddressScheme varAddr P.GP
@@ -158,10 +169,13 @@ compileFunctions funs = forM_ funs $
         symbolTable .$ Sym.pushScope
         compileArgs args
         compileLocalVariables vars
+        compileStatements body
+        symbolTable .$ Sym.popScope
+        emit [P.Rts]
         return () 
        
 compileArgs :: [String] -> TurtleCompilation ()
-compileArgs args = forM_ (zip [-3,-4..] args) $
+compileArgs args = forM_ (zip [-(fromIntegral $ length args) - 1..] args) $
     \(pos, arg) -> symbolTable.symbol (Sym.Identifier arg Nothing) .= AddressScheme pos P.FP
 
 compileLocalVariables :: [T.VarDec] -> TurtleCompilation ()
@@ -178,7 +192,6 @@ compileStatements (T.Statements stmts) = mapM_ compileStatements stmts
 
 compileExp T.Up = do
     emit [P.Up]
-    currentAddress .+= 1
 compileExp T.Down = do
     emit [P.Down]
 compileExp (T.MoveTo x y) = do
@@ -193,22 +206,41 @@ compileExp (T.Assignment id exp) = do
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
     emit [P.Store (fromIntegral addr) from]
 compileExp (T.If cond thenblock elseblock) = do
-    compileComparison
+    compileComparison cond
     startAddress <- valueOf currentAddress
     emit [P.Jump (Left 0)]
-    compileExp thenblock
+    compileStatements thenblock
     exitAddress <- valueOf currentAddress
     emit [P.Jump (Left 0)]
     midAddress <- valueOf currentAddress
-    compileExp elseblock
+    maybe (return ()) compileStatements elseblock
     endAddress <- valueOf currentAddress
     case cond of
-        (LessThan _ _) -> backPatch  [P.Jlt (Left midAddress)]
-        (Equal _ _) -> backPatch [P.Jeq (Left midAddress)]
-    backPatch exitAddress [P.Jump (Left endAddress)]
+        (T.LessThan _ _) -> backpatch startAddress (P.Jlt (Left midAddress))
+        (T.Equal _ _) -> backpatch startAddress (P.Jeq (Left midAddress))
+    backpatch exitAddress (P.Jump (Left endAddress))
+compileExp (T.While cond loopbody) = do
+    loopBody <- valueOf currentAddress
+    compileComparison cond
+    initJump <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
+    loopSkip <- valueOf currentAddress
+    emit [P.Jump (Left 0)]
+    loopMain <- valueOf currentAddress
+    compileStatements loopbody
+    emit [P.Jump (Left loopBody)]
+    endLoop <- valueOf currentAddress
+    case cond of
+        (T.LessThan _ _) -> backpatch initJump (P.Jlt (Left loopMain))
+        (T.Equal _ _) -> backpatch initJump (P.Jeq (Left loopMain))
+    backpatch loopSkip (P.Jump $ Left endLoop)
+compileExp (T.ExpFunctionCall id args) = do
+    emit [P.Loadi 0]
+    forM_ args compileExpression
+    (AddressScheme addr P.PC) <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
+    emit [P.Jsr (Left addr)]
+    emit [P.Pop (fromIntegral $ length args)]
     
-compileExp _ = error "Exp not yet fully implemented"
-
 compileComparison (T.Equal e1 e2) = do
     compileExpression e1
     compileExpression e2
@@ -217,7 +249,7 @@ compileComparison (T.LessThan e1 e2) = do
     compileExpression e1
     compileExpression e2
     emit [P.Sub, P.Test, P.Pop 1]
-    
+
 compileExpression (T.Plus e1 e2) = do
     compileExpression e1
     compileExpression e2
@@ -239,4 +271,4 @@ compileExpression (T.FunctionCall id args) = do
     emit [P.Loadi 0]
     forM_ args compileExpression
     (AddressScheme addr P.PC) <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
-    emit [P.Jsr (Left addr)]
+    emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]

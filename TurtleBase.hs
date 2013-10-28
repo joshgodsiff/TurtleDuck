@@ -1,6 +1,6 @@
 {-# Language Rank2Types, NoMonomorphismRestriction #-}
--- | A clean module version of base #todo real intro
--- by Robert 'Probie' Offner and Josh Godsiff
+-- | A clean module version of base module - implements all conversion from Turtle to PDP Assembly
+-- by Robert 'Probie' Offner and Josh Godsiff (u4849459 and u4685222)
 
 module TurtleBase where
 

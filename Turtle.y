@@ -1,3 +1,6 @@
+-- | Parser module
+-- by Robert 'Probie' Offner and Josh Godsiff (u4849459 and u4685222)
+
 {
 module Main where
 
@@ -11,7 +14,7 @@ import qualified Data.Map as M
 
 %name parseTurtle 
 %tokentype {Token}
-%error {error "Lexical error" }
+%error {error "Parse error"}
 %token
     turtle    {Tok.Turtle}
     var       {Tok.Var}

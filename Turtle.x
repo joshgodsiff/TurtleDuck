@@ -1,3 +1,6 @@
+-- | Lexer Module
+-- by Robert 'Probie' Offner and Josh Godsiff (u4849459 and u4685222)
+
 {
 module Lexer where
 }

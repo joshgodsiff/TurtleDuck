@@ -261,9 +261,8 @@ compileExp (T.ExpFunctionCall id args) = do
     forM_ args compileExpression
     scheme <- valueOf (symbolTable.symbol(Sym.Identifier id (Just (length args))))
     case scheme of
-        (AddressScheme addr P.PC) -> emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]
-        LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args)]
-    emit [P.Pop $ (fromIntegral $ length args) + 1]
+        (AddressScheme addr P.PC) -> emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args + 1)]
+        LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args + 1) ]
 compileExp (T.Return exp) = do
     valueOf symbolTable >>= \table -> case table  of
          _ :< Nothing -> error "Error: Attempted to return from Main"
@@ -306,6 +305,5 @@ compileExpression (T.FunctionCall id args) = do
     case scheme of
         (AddressScheme addr P.PC) -> emit [P.Jsr (Left addr), P.Pop (fromIntegral $ length args)]
         LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args)]
-    emit [P.Pop $ fromIntegral $ length args]
 
                 

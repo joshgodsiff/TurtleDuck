@@ -55,6 +55,7 @@ FunDecs : {[]}
 
 Statement : Exp {Statement $1}
           | '{' Exp Statement1 {Statements (Statement $2:$3)}
+	  | '{' '}' {Statements []}
 
 Statement1 : Exp Statement1 {Statement $1:$2}
           | '}' {[]}

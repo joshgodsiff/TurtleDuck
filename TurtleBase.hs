@@ -204,9 +204,13 @@ compileExp (T.MoveTo x y) = do
     compileExpression y
     emit [P.Move]
 compileExp (T.Read x) = do
+    valueOf symbolTable >>= \table -> case Sym.getSymbol (Sym.Identifier x Nothing) table  of
+        Nothing -> error $ "Identifier " ++ x ++ " not in scope in Read statement."
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Read (fromIntegral addr) from]
 compileExp (T.Assignment id exp) = do
+    valueOf symbolTable >>= \table -> case Sym.getSymbol (Sym.Identifier id Nothing) table  of
+        Nothing -> error $ "Identifier " ++ id ++ " not in scope in Assignment statement."
     compileExpression exp
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
     emit [P.Store (fromIntegral addr) from]
@@ -252,6 +256,8 @@ compileExp (T.ExpFunctionCall id args) = do
         LinkLater -> emit [P.Jsr (Right (Sym.Identifier id (Just (length args)))), P.Pop (fromIntegral $ length args)]
     emit [P.Pop $ (fromIntegral $ length args) + 1]
 compileExp (T.Return exp) = do
+    valueOf symbolTable >>= \table -> case table  of
+         _ :< Nothing -> error "Error: Attempted to return from Main"
     compileExpression exp
     (AddressScheme addr P.FP) <- valueOf (symbolTable.symbol(Sym.Identifier "return" Nothing))
     emit [P.Store (fromIntegral addr) P.FP, P.Rts]
@@ -280,6 +286,8 @@ compileExpression (T.Mult e1 e2) = do
 compileExpression (T.Literal i) = do
     emit [P.Loadi (fromIntegral i)]
 compileExpression (T.Identifier id) = do
+    valueOf symbolTable >>= \table -> case Sym.getSymbol (Sym.Identifier id Nothing) table  of
+        Nothing -> error $ "Identifier " ++ id ++ " not in scope."
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
     emit [P.Load (fromIntegral addr) from]
 compileExpression (T.FunctionCall id args) = do

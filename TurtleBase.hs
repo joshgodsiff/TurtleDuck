@@ -125,7 +125,8 @@ runTurtle t = (snd (runTurtleCompilation (turtle t)
     (TurtleState id Sym.newSymbolTable M.empty 0 (Pointer 0 0))) ^. instructionList) []
     
 turtle :: T.Turtle -> TurtleCompilation ()
-turtle (T.Turtle name vars funs stmts) = do 
+turtle (T.Turtle name vars funs stmts) = do
+    -- TODO: Jump to main
     getFunctionNames funs
     compileGlobalVariables vars
     endOfGlobals <- valueOf currentAddress
@@ -134,6 +135,7 @@ turtle (T.Turtle name vars funs stmts) = do
     endOfFunctions <- valueOf currentAddress
     backpatch endOfGlobals (P.Jump (Left endOfFunctions))
     compileStatements stmts
+<<<<<<< HEAD
     emit [P.Halt]
 
 backpatch :: Int16 -> P.Instruction -> TurtleCompilation ()
@@ -144,6 +146,9 @@ backpatch' _ n [] = error $ "Oh shit we fucked up the backpatch " ++ show n ++ "
 backpatch' n _ _ | n < 0 = error "Oh shit we fucked up the backpatch; they don't add up"
 backpatch' 0 y (x:xs) = (y:xs)
 backpatch' n y (x:xs) = x: (backpatch' (n - P.instructionLength x) y xs)
+=======
+    emit [Halt] -- Is it necessary to increment current address after this?
+>>>>>>> 2b6f131964caf249c5b9b442ebdd1966fb224b28
 
 getFunctionNames :: [T.FunDec] -> TurtleCompilation ()
 getFunctionNames funs = forM_ funs $
@@ -199,8 +204,10 @@ compileExp (T.MoveTo x y) = do
     compileExpression y
     emit [P.Move]
 compileExp (T.Read x) = do
+    -- TODO: Throw error on undeclared x
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
     emit [P.Read (fromIntegral addr) from]
+<<<<<<< HEAD
 compileExp (T.Assignment id exp) = do
     compileExpression exp
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
@@ -249,6 +256,21 @@ compileComparison (T.LessThan e1 e2) = do
     compileExpression e1
     compileExpression e2
     emit [P.Sub, P.Test, P.Pop 1]
+=======
+    currentAddress .+=1
+compileExp (T.Return e) = do
+    -- TODO: Throw error if we attempt to return from main.
+    compileExpression e
+    returnAddr <- -- Need some way of getting this.
+    emit [Store returnAddr FP, Rts]
+    currentAddress .+= 2
+compileExp (T.Assignment id e) = do
+    -- TODO: Throw error on undeclared id
+    compileExpression e
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
+    emit [Store (fromIntegral addr) from]
+    currentAddress .+= 1
+>>>>>>> 2b6f131964caf249c5b9b442ebdd1966fb224b28
 
 compileExpression (T.Plus e1 e2) = do
     compileExpression e1
@@ -264,8 +286,15 @@ compileExpression (T.Mult e1 e2) = do
     emit [P.Mul]
 compileExpression (T.Literal i) = do
     emit [P.Loadi (fromIntegral i)]
+<<<<<<< HEAD
 compileExpression (T.Identifier id) = do
     (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier id Nothing))
+=======
+    currentAddress .+= 2
+compileExpression (T.Identifier id) =  do
+    -- TODO: Throw error on undeclared id
+    (AddressScheme addr from) <- valueOf (symbolTable.symbol(Sym.Identifier x Nothing))
+>>>>>>> 2b6f131964caf249c5b9b442ebdd1966fb224b28
     emit [P.Load (fromIntegral addr) from]
 compileExpression (T.FunctionCall id args) = do
     emit [P.Loadi 0]

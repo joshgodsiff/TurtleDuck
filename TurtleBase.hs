@@ -137,7 +137,16 @@ turtle (T.Turtle name vars funs stmts) = do
     compileStatements stmts
     emit [P.Halt]
 
--- linkFunctions :: 
+linkFunctions :: TurtleCompilation ()
+linkFunctions = do
+    table <- valueOf symbolTable
+    instructionList .$ (linkFunction' table .)
+    
+linkFunction' table [] = []
+linkFunction' table (P.Jsr (Right x):xs) = case Sym.getSymbol x table of
+    (Just (AddressScheme offset P.PC)) -> (P.Jsr (Left offset): (linkFunction' table xs))
+    Nothing -> error $ "Function " ++ show x ++ " not found"
+linkFunction' table (x:xs) = x : (linkFunction' table xs)
     
 backpatch :: Int16 -> P.Instruction -> TurtleCompilation ()
 backpatch pos instr = instructionList .$ (backpatch' pos instr .)
